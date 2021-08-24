@@ -50,27 +50,12 @@ define('WPINC', 'wp-includes');
 // review load.php further, then continue with wp-settings.php review from line 34
 // wpincludes/load.php
 
-/**
- * These functions are needed to load WordPress.
- *
- * @package WordPress
- */
-
-/**
- * Return the HTTP protocol sent by the server.
- *
- * @since 4.4.0
- *
- * @return string The HTTP protocol. Default: HTTP/1.0.
- */
-function wp_get_server_protocol() {
-    $protocol = isset( $_SERVER['SERVER_PROTOCOL'] ) ? $_SERVER['SERVER_PROTOCOL'] : '';
-    if ( ! in_array( $protocol, array( 'HTTP/1.1', 'HTTP/2', 'HTTP/2.0' ), true ) ) {
-        $protocol = 'HTTP/1.0';
-    }
-    return $protocol;
+// force 1.0
+function wp_get_server_protocol() : string {
+    return 'HTTP/1.0';
 }
 
+// need to do some of this
 /**
  * Fix `$_SERVER` variables for various setups.
  *
@@ -141,295 +126,38 @@ function wp_fix_server_vars() {
     wp_populate_basic_auth_from_authorization_header();
 }
 
-/**
- * Populates the Basic Auth server details from the Authorization header.
- *
- * Some servers running in CGI or FastCGI mode don't pass the Authorization
- * header on to WordPress.  If it's been rewritten to the `HTTP_AUTHORIZATION` header,
- * fill in the proper $_SERVER variables instead.
- *
- * @since 5.6.0
- */
-function wp_populate_basic_auth_from_authorization_header() {
-    // If we don't have anything to pull from, return early.
-    if ( ! isset( $_SERVER['HTTP_AUTHORIZATION'] ) && ! isset( $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ) ) {
-        return;
-    }
-
-    // If either PHP_AUTH key is already set, do nothing.
-    if ( isset( $_SERVER['PHP_AUTH_USER'] ) || isset( $_SERVER['PHP_AUTH_PW'] ) ) {
-        return;
-    }
-
-    // From our prior conditional, one of these must be set.
-    $header = isset( $_SERVER['HTTP_AUTHORIZATION'] ) ? $_SERVER['HTTP_AUTHORIZATION'] : $_SERVER['REDIRECT_HTTP_AUTHORIZATION'];
-
-    // Test to make sure the pattern matches expected.
-    if ( ! preg_match( '%^Basic [a-z\d/+]*={0,2}$%i', $header ) ) {
-        return;
-    }
-
-    // Removing `Basic ` the token would start six characters in.
-    $token    = substr( $header, 6 );
-    $userpass = base64_decode( $token );
-
-    list( $user, $pass ) = explode( ':', $userpass );
-
-    // Now shove them in the proper keys where we're expecting later on.
-    $_SERVER['PHP_AUTH_USER'] = $user;
-    $_SERVER['PHP_AUTH_PW']   = $pass;
+// not relevant for Lokl / CLI usage... but may bring back in for protected VPS usage
+function wp_populate_basic_auth_from_authorization_header() : void {
 }
 
-/**
- * Check for the required PHP version, and the MySQL extension or
- * a database drop-in.
- *
- * Dies if requirements are not met.
- *
- * @since 3.0.0
- * @access private
- *
- * @global string $required_php_version The required PHP version string.
- * @global string $wp_version           The WordPress version string.
- */
-function wp_check_php_mysql_versions() {
-    global $required_php_version, $wp_version;
-    $php_version = phpversion();
-
-    if ( version_compare( $required_php_version, $php_version, '>' ) ) {
-        $protocol = wp_get_server_protocol();
-        header( sprintf( '%s 500 Internal Server Error', $protocol ), true, 500 );
-        header( 'Content-Type: text/html; charset=utf-8' );
-        printf( 'Your server is running PHP version %1$s but WordPress %2$s requires at least %3$s.', $php_version, $wp_version, $required_php_version );
-        exit( 1 );
-    }
-
-    if ( ! extension_loaded( 'mysql' ) && ! extension_loaded( 'mysqli' ) && ! extension_loaded( 'mysqlnd' )
-        // This runs before default constants are defined, so we can't assume WP_CONTENT_DIR is set yet.
-        && ( defined( 'WP_CONTENT_DIR' ) && ! file_exists( WP_CONTENT_DIR . '/db.php' )
-            || ! file_exists( ABSPATH . 'wp-content/db.php' ) )
-    ) {
-        require_once ABSPATH . WPINC . '/functions.php';
-        wp_load_translations_early();
-        $args = array(
-            'exit' => false,
-            'code' => 'mysql_not_found',
-        );
-        wp_die(
-            __( 'Your PHP installation appears to be missing the MySQL extension which is required by WordPress.' ),
-            __( 'Requirements Not Met' ),
-            $args
-        );
-        exit( 1 );
-    }
+// not required
+function wp_check_php_mysql_versions() : void {
 }
 
-/**
- * Retrieves the current environment type.
- *
- * The type can be set via the `WP_ENVIRONMENT_TYPE` global system variable,
- * or a constant of the same name.
- *
- * Possible values are 'local', 'development', 'staging', and 'production'.
- * If not set, the type defaults to 'production'.
- *
- * @since 5.5.0
- * @since 5.5.1 Added the 'local' type.
- * @since 5.5.1 Removed the ability to alter the list of types.
- *
- * @return string The current environment type.
- */
 function wp_get_environment_type() {
-    static $current_env = '';
-
-    if ( $current_env ) {
-        return $current_env;
-    }
-
-    $wp_environments = array(
-        'local',
-        'development',
-        'staging',
-        'production',
-    );
-
-    // Add a note about the deprecated WP_ENVIRONMENT_TYPES constant.
-    if ( defined( 'WP_ENVIRONMENT_TYPES' ) && function_exists( '_deprecated_argument' ) ) {
-        if ( function_exists( '__' ) ) {
-            /* translators: %s: WP_ENVIRONMENT_TYPES */
-            $message = sprintf( __( 'The %s constant is no longer supported.' ), 'WP_ENVIRONMENT_TYPES' );
-        } else {
-            $message = sprintf( 'The %s constant is no longer supported.', 'WP_ENVIRONMENT_TYPES' );
-        }
-
-        _deprecated_argument(
-            'define()',
-            '5.5.1',
-            $message
-        );
-    }
-
-    // Check if the environment variable has been set, if `getenv` is available on the system.
-    if ( function_exists( 'getenv' ) ) {
-        $has_env = getenv( 'WP_ENVIRONMENT_TYPE' );
-        if ( false !== $has_env ) {
-            $current_env = $has_env;
-        }
-    }
-
-    // Fetch the environment from a constant, this overrides the global system variable.
-    if ( defined( 'WP_ENVIRONMENT_TYPE' ) ) {
-        $current_env = WP_ENVIRONMENT_TYPE;
-    }
-
-    // Make sure the environment is an allowed one, and not accidentally set to an invalid value.
-    if ( ! in_array( $current_env, $wp_environments, true ) ) {
-        $current_env = 'production';
-    }
-
-    return $current_env;
+    return 'production';
 }
 
-/**
- * Don't load all of WordPress when handling a favicon.ico request.
- *
- * Instead, send the headers for a zero-length favicon and bail.
- *
- * @since 3.0.0
- * @deprecated 5.4.0 Deprecated in favor of do_favicon().
- */
-function wp_favicon_request() {
-    if ( '/favicon.ico' === $_SERVER['REQUEST_URI'] ) {
-        header( 'Content-Type: image/vnd.microsoft.icon' );
-        exit;
-    }
+function wp_maintenance() : void {
+    return;
 }
 
-/**
- * Die with a maintenance message when conditions are met.
- *
- * The default message can be replaced by using a drop-in (maintenance.php in
- * the wp-content directory).
- *
- * @since 3.0.0
- * @access private
- */
-function wp_maintenance() {
-    // Return if maintenance mode is disabled.
-    if ( ! wp_is_maintenance_mode() ) {
-        return;
-    }
-
-    if ( file_exists( WP_CONTENT_DIR . '/maintenance.php' ) ) {
-        require_once WP_CONTENT_DIR . '/maintenance.php';
-        die();
-    }
-
-    require_once ABSPATH . WPINC . '/functions.php';
-    wp_load_translations_early();
-
-    header( 'Retry-After: 600' );
-
-    wp_die(
-        __( 'Briefly unavailable for scheduled maintenance. Check back in a minute.' ),
-        __( 'Maintenance' ),
-        503
-    );
+function wp_is_maintenance_mode() : bool {
+    return false;
 }
 
-/**
- * Check if maintenance mode is enabled.
- *
- * Checks for a file in the WordPress root directory named ".maintenance".
- * This file will contain the variable $upgrading, set to the time the file
- * was created. If the file was created less than 10 minutes ago, WordPress
- * is in maintenance mode.
- *
- * @since 5.5.0
- *
- * @global int $upgrading The Unix timestamp marking when upgrading WordPress began.
- *
- * @return bool True if maintenance mode is enabled, false otherwise.
- */
-function wp_is_maintenance_mode() {
-    global $upgrading;
-
-    if ( ! file_exists( ABSPATH . '.maintenance' ) || wp_installing() ) {
-        return false;
-    }
-
-    require ABSPATH . '.maintenance';
-    // If the $upgrading timestamp is older than 10 minutes, consider maintenance over.
-    if ( ( time() - $upgrading ) >= 10 * MINUTE_IN_SECONDS ) {
-        return false;
-    }
-
-    /**
-     * Filters whether to enable maintenance mode.
-     *
-     * This filter runs before it can be used by plugins. It is designed for
-     * non-web runtimes. If this filter returns true, maintenance mode will be
-     * active and the request will end. If false, the request will be allowed to
-     * continue processing even if maintenance mode should be active.
-     *
-     * @since 4.6.0
-     *
-     * @param bool $enable_checks Whether to enable maintenance mode. Default true.
-     * @param int  $upgrading     The timestamp set in the .maintenance file.
-     */
-    if ( ! apply_filters( 'enable_maintenance_mode', true, $upgrading ) ) {
-        return false;
-    }
-
-    return true;
-}
-
-/**
- * Get the time elapsed so far during this PHP script.
- *
- * Uses REQUEST_TIME_FLOAT that appeared in PHP 5.4.0.
- *
- * @since 5.8.0
- *
- * @return float Seconds since the PHP script started.
- */
-function timer_float() {
+function timer_float() : float {
     return microtime( true ) - $_SERVER['REQUEST_TIME_FLOAT'];
 }
 
-/**
- * Start the WordPress micro-timer.
- *
- * @since 0.71
- * @access private
- *
- * @global float $timestart Unix timestamp set at the beginning of the page load.
- * @see timer_stop()
- *
- * @return bool Always returns true.
- */
-function timer_start() {
+// wonder why the useless return value...
+function timer_start() : bool {
     global $timestart;
     $timestart = microtime( true );
     return true;
 }
 
-/**
- * Retrieve or display the time from the page start to when function is called.
- *
- * @since 0.71
- *
- * @global float   $timestart Seconds from when timer_start() is called.
- * @global float   $timeend   Seconds from when function is called.
- *
- * @param int|bool $display   Whether to echo or return the results. Accepts 0|false for return,
- *                            1|true for echo. Default 0|false.
- * @param int      $precision The number of digits from the right of the decimal to display.
- *                            Default 3.
- * @return string The "second.microsecond" finished time calculation. The number is formatted
- *                for human consumption, both localized and rounded.
- */
-function timer_stop( $display = 0, $precision = 3 ) {
+function timer_stop( int $display = 0, int $precision = 3 ) : string {
     global $timestart, $timeend;
     $timeend   = microtime( true );
     $timetotal = $timeend - $timestart;
@@ -440,106 +168,11 @@ function timer_stop( $display = 0, $precision = 3 ) {
     return $r;
 }
 
-/**
- * Set PHP error reporting based on WordPress debug settings.
- *
- * Uses three constants: `WP_DEBUG`, `WP_DEBUG_DISPLAY`, and `WP_DEBUG_LOG`.
- * All three can be defined in wp-config.php. By default, `WP_DEBUG` and
- * `WP_DEBUG_LOG` are set to false, and `WP_DEBUG_DISPLAY` is set to true.
- *
- * When `WP_DEBUG` is true, all PHP notices are reported. WordPress will also
- * display internal notices: when a deprecated WordPress function, function
- * argument, or file is used. Deprecated code may be removed from a later
- * version.
- *
- * It is strongly recommended that plugin and theme developers use `WP_DEBUG`
- * in their development environments.
- *
- * `WP_DEBUG_DISPLAY` and `WP_DEBUG_LOG` perform no function unless `WP_DEBUG`
- * is true.
- *
- * When `WP_DEBUG_DISPLAY` is true, WordPress will force errors to be displayed.
- * `WP_DEBUG_DISPLAY` defaults to true. Defining it as null prevents WordPress
- * from changing the global configuration setting. Defining `WP_DEBUG_DISPLAY`
- * as false will force errors to be hidden.
- *
- * When `WP_DEBUG_LOG` is true, errors will be logged to `wp-content/debug.log`.
- * When `WP_DEBUG_LOG` is a valid path, errors will be logged to the specified file.
- *
- * Errors are never displayed for XML-RPC, REST, `ms-files.php`, and Ajax requests.
- *
- * @since 3.0.0
- * @since 5.1.0 `WP_DEBUG_LOG` can be a file path.
- * @access private
- */
-function wp_debug_mode() {
-    /**
-     * Filters whether to allow the debug mode check to occur.
-     *
-     * This filter runs before it can be used by plugins. It is designed for
-     * non-web run-times. Returning false causes the `WP_DEBUG` and related
-     * constants to not be checked and the default PHP values for errors
-     * will be used unless you take care to update them yourself.
-     *
-     * To use this filter you must define a `$wp_filter` global before
-     * WordPress loads, usually in `wp-config.php`.
-     *
-     * Example:
-     *
-     *     $GLOBALS['wp_filter'] = array(
-     *         'enable_wp_debug_mode_checks' => array(
-     *             10 => array(
-     *                 array(
-     *                     'accepted_args' => 0,
-     *                     'function'      => function() {
-     *                         return false;
-     *                     },
-     *                 ),
-     *             ),
-     *         ),
-     *     );
-     *
-     * @since 4.6.0
-     *
-     * @param bool $enable_debug_mode Whether to enable debug mode checks to occur. Default true.
-     */
-    if ( ! apply_filters( 'enable_wp_debug_mode_checks', true ) ) {
-        return;
-    }
-
-    if ( WP_DEBUG ) {
-        error_reporting( E_ALL );
-
-        if ( WP_DEBUG_DISPLAY ) {
-            ini_set( 'display_errors', 1 );
-        } elseif ( null !== WP_DEBUG_DISPLAY ) {
-            ini_set( 'display_errors', 0 );
-        }
-
-        if ( in_array( strtolower( (string) WP_DEBUG_LOG ), array( 'true', '1' ), true ) ) {
-            $log_path = WP_CONTENT_DIR . '/debug.log';
-        } elseif ( is_string( WP_DEBUG_LOG ) ) {
-            $log_path = WP_DEBUG_LOG;
-        } else {
-            $log_path = false;
-        }
-
-        if ( $log_path ) {
-            ini_set( 'log_errors', 1 );
-            ini_set( 'error_log', $log_path );
-        }
-    } else {
-        error_reporting( E_CORE_ERROR | E_CORE_WARNING | E_COMPILE_ERROR | E_ERROR | E_WARNING | E_PARSE | E_USER_ERROR | E_USER_WARNING | E_RECOVERABLE_ERROR );
-    }
-
-    if (
-        defined( 'XMLRPC_REQUEST' ) || defined( 'REST_REQUEST' ) || defined( 'MS_FILES_REQUEST' ) ||
-        ( defined( 'WP_INSTALLING' ) && WP_INSTALLING ) ||
-        wp_doing_ajax() || wp_is_json_request() ) {
-        ini_set( 'display_errors', 0 );
-    }
+// no debug mode
+function wp_debug_mode() : void {
 }
 
+// can probably hardcode these, skip the legacy one
 /**
  * Set the location of the language directory.
  *
@@ -585,14 +218,7 @@ function wp_set_lang_dir() {
     }
 }
 
-/**
- * Load the database class file and instantiate the `$wpdb` global.
- *
- * @since 2.5.0
- *
- * @global wpdb $wpdb WordPress database abstraction object.
- */
-function require_wp_db() {
+function require_wp_db() : void {
     global $wpdb;
 
     require_once ABSPATH . WPINC . '/wp-db.php';
@@ -788,32 +414,8 @@ function wp_start_object_cache() {
     $first_init = false;
 }
 
-/**
- * Redirect to the installer if WordPress is not installed.
- *
- * Dies with an error message when Multisite is enabled.
- *
- * @since 3.0.0
- * @access private
- */
-function wp_not_installed() {
-    if ( is_multisite() ) {
-        if ( ! is_blog_installed() && ! wp_installing() ) {
-            nocache_headers();
-
-            wp_die( __( 'The site you have requested is not installed properly. Please contact the system administrator.' ) );
-        }
-    } elseif ( ! is_blog_installed() && ! wp_installing() ) {
-        nocache_headers();
-
-        require ABSPATH . WPINC . '/kses.php';
-        require ABSPATH . WPINC . '/pluggable.php';
-
-        $link = wp_guess_url() . '/wp-admin/install.php';
-
-        wp_redirect( $link );
-        die();
-    }
+// irrelevant
+function wp_not_installed() : void {
 }
 
 /**
@@ -848,21 +450,8 @@ function wp_get_mu_plugins() {
     return $mu_plugins;
 }
 
-/**
- * Retrieve an array of active and valid plugin files.
- *
- * While upgrading or installing WordPress, no plugins are returned.
- *
- * The default directory is `wp-content/plugins`. To change the default
- * directory manually, define `WP_PLUGIN_DIR` and `WP_PLUGIN_URL`
- * in `wp-config.php`.
- *
- * @since 3.0.0
- * @access private
- *
- * @return string[] Array of paths to plugin files relative to the plugins directory.
- */
-function wp_get_active_and_valid_plugins() {
+// needed for asset detection
+function wp_get_active_and_valid_plugins() : string[] {
     $plugins        = array();
     $active_plugins = (array) get_option( 'active_plugins', array() );
 
@@ -929,17 +518,8 @@ function wp_skip_paused_plugins( array $plugins ) {
     return $plugins;
 }
 
-/**
- * Retrieves an array of active and valid themes.
- *
- * While upgrading or installing WordPress, no themes are returned.
- *
- * @since 5.1.0
- * @access private
- *
- * @return string[] Array of absolute paths to theme directories.
- */
-function wp_get_active_and_valid_themes() {
+// may be needed for asset detection
+function wp_get_active_and_valid_themes() : string[] {
     global $pagenow;
 
     $themes = array();
@@ -970,6 +550,7 @@ function wp_get_active_and_valid_themes() {
     return $themes;
 }
 
+// might be useful
 /**
  * Filters a given list of themes, removing any paused themes from it.
  *
@@ -999,155 +580,35 @@ function wp_skip_paused_themes( array $themes ) {
     return $themes;
 }
 
-/**
- * Is WordPress in Recovery Mode.
- *
- * In this mode, plugins or themes that cause WSODs will be paused.
- *
- * @since 5.2.0
- *
- * @return bool
- */
 function wp_is_recovery_mode() {
-    return wp_recovery_mode()->is_active();
+    return false;
 }
 
-/**
- * Determines whether we are currently on an endpoint that should be protected against WSODs.
- *
- * @since 5.2.0
- *
- * @global string $pagenow
- *
- * @return bool True if the current endpoint should be protected.
- */
+// not relevant
 function is_protected_endpoint() {
-    // Protect login pages.
-    if ( isset( $GLOBALS['pagenow'] ) && 'wp-login.php' === $GLOBALS['pagenow'] ) {
-        return true;
-    }
-
-    // Protect the admin backend.
-    if ( is_admin() && ! wp_doing_ajax() ) {
-        return true;
-    }
-
-    // Protect Ajax actions that could help resolve a fatal error should be available.
-    if ( is_protected_ajax_action() ) {
-        return true;
-    }
-
-    /**
-     * Filters whether the current request is against a protected endpoint.
-     *
-     * This filter is only fired when an endpoint is requested which is not already protected by
-     * WordPress core. As such, it exclusively allows providing further protected endpoints in
-     * addition to the admin backend, login pages and protected Ajax actions.
-     *
-     * @since 5.2.0
-     *
-     * @param bool $is_protected_endpoint Whether the currently requested endpoint is protected.
-     *                                    Default false.
-     */
-    return (bool) apply_filters( 'is_protected_endpoint', false );
+    return false;
 }
 
-/**
- * Determines whether we are currently handling an Ajax action that should be protected against WSODs.
- *
- * @since 5.2.0
- *
- * @return bool True if the current Ajax action should be protected.
- */
+// no ajax for SSG
 function is_protected_ajax_action() {
-    if ( ! wp_doing_ajax() ) {
         return false;
-    }
-
-    if ( ! isset( $_REQUEST['action'] ) ) {
-        return false;
-    }
-
-    $actions_to_protect = array(
-        'edit-theme-plugin-file', // Saving changes in the core code editor.
-        'heartbeat',              // Keep the heart beating.
-        'install-plugin',         // Installing a new plugin.
-        'install-theme',          // Installing a new theme.
-        'search-plugins',         // Searching in the list of plugins.
-        'search-install-plugins', // Searching for a plugin in the plugin install screen.
-        'update-plugin',          // Update an existing plugin.
-        'update-theme',           // Update an existing theme.
-    );
-
-    /**
-     * Filters the array of protected Ajax actions.
-     *
-     * This filter is only fired when doing Ajax and the Ajax request has an 'action' property.
-     *
-     * @since 5.2.0
-     *
-     * @param string[] $actions_to_protect Array of strings with Ajax actions to protect.
-     */
-    $actions_to_protect = (array) apply_filters( 'wp_protected_ajax_actions', $actions_to_protect );
-
-    if ( ! in_array( $_REQUEST['action'], $actions_to_protect, true ) ) {
-        return false;
-    }
-
-    return true;
 }
 
-/**
- * Set internal encoding.
- *
- * In most cases the default internal encoding is latin1, which is
- * of no use, since we want to use the `mb_` functions for `utf-8` strings.
- *
- * @since 3.0.0
- * @access private
- */
-function wp_set_internal_encoding() {
-    if ( function_exists( 'mb_internal_encoding' ) ) {
-        $charset = get_option( 'blog_charset' );
-        // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
-        if ( ! $charset || ! @mb_internal_encoding( $charset ) ) {
-            mb_internal_encoding( 'UTF-8' );
-        }
-    }
+// utf8 all the things
+function wp_set_internal_encoding() : void {
+    mb_internal_encoding( 'UTF-8' );
 }
 
-/**
- * Add magic quotes to `$_GET`, `$_POST`, `$_COOKIE`, and `$_SERVER`.
- *
- * Also forces `$_REQUEST` to be `$_GET + $_POST`. If `$_SERVER`,
- * `$_COOKIE`, or `$_ENV` are needed, use those superglobals directly.
- *
- * @since 3.0.0
- * @access private
- */
-function wp_magic_quotes() {
-    // Escape with wpdb.
+// add_magic_quotes from inc/functions.php
+function wp_magic_quotes() : void {
     $_GET    = add_magic_quotes( $_GET );
     $_POST   = add_magic_quotes( $_POST );
     $_COOKIE = add_magic_quotes( $_COOKIE );
     $_SERVER = add_magic_quotes( $_SERVER );
-
-    // Force REQUEST to be GET + POST.
     $_REQUEST = array_merge( $_GET, $_POST );
 }
 
-/**
- * Runs just before PHP shuts down execution.
- *
- * @since 1.2.0
- * @access private
- */
-function shutdown_action_hook() {
-    /**
-     * Fires just before PHP shuts down execution.
-     *
-     * @since 1.2.0
-     */
+function shutdown_action_hook() : void {
     do_action( 'shutdown' );
 
     wp_cache_close();
