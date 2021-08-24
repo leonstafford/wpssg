@@ -44,7 +44,9 @@ define('WPINC', 'wp-includes');
 // global $wp_version, $wp_db_version, $tinymce_version, $required_php_version, $required_mysql_version,
 // ... $wp_local_package;
 // so we can ignore this: require ABSPATH . WPINC . '/version.php';
+global $wp_version;
 
+$wp_version = '5.8';
 
 // make a decision on language support and load the DB. a lot of this file is unneeded utility code.
 
