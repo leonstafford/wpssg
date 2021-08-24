@@ -6,4 +6,4 @@ parameters:
     phpVersion: 80000
     inferPrivatePropertyTypeFromConstructor: true
     paths:
-        - ../src/
+        - ../wpssg.php

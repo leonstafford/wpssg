@@ -17,6 +17,11 @@
         <exclude name="SlevomatCodingStandard.TypeHints.PropertyTypeHint"/>
         <exclude name="WordPress.WP.AlternativeFunctions"/>
         <exclude name="Squiz.WhiteSpace.LanguageConstructSpacing"/>
+        <exclude name="PSR1.Files.SideEffects.FoundWithSymbols"/>
+        <exclude name="Squiz.PHP.DiscouragedFunctions.Discouraged"/>
+        <exclude name="Squiz.NamingConventions.ValidVariableName.NotCamelCaps"/>
+        <exclude name="WordPress.WP.GlobalVariablesOverride.Prohibited"/>
+    
     </rule>
 
     <rule ref="PHPCompatibility">
@@ -27,4 +32,7 @@
     <rule ref="PHPCompatibility.FunctionDeclarations.NewClosure">
         <exclude-pattern>./tests/Unit/*\.php</exclude-pattern>
     </rule>
+
+
+
 </ruleset>

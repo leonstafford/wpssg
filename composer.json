@@ -21,12 +21,7 @@
         "php": ">=8.0"
     },
     "require-dev": {
-        "10up/wp_mock": "*",
         "dealerdirect/phpcodesniffer-composer-installer": "*",
-        "infection/infection": "*",
-        "mikey179/vfsstream": "*",
-        "mockery/mockery": "*",
-        "pestphp/pest": "*",
         "php-parallel-lint/php-parallel-lint": "*",
         "phpcompatibility/php-compatibility": "*",
         "phpstan/phpstan-strict-rules": "*",
@@ -40,16 +35,12 @@
       "phpstan": "php -d memory_limit=-1 ./vendor/bin/phpstan --configuration=conf/phpstan.neon analyse",
       "phpcbf": "vendor/bin/phpcbf --standard=conf/phpcs.xml wpssg.php",
       "phpcs":  "vendor/bin/phpcs -s --standard=conf/phpcs.xml wpssg.php",
-      "pest": "vendor/bin/pest -c conf/phpunit.xml",
-      "coverage": "vendor/bin/pest --coverage",
       "lint": "vendor/bin/parallel-lint --exclude vendor wpssg.php",
       "test": [
           "composer validate --strict",
           "@lint",
           "@phpcs",
-          "@phpstan",
-          "@pest",
-          "@coverage"
+          "@phpstan"
       ]
     }
 }
