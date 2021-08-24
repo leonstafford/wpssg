@@ -15,9 +15,10 @@ declare(strict_types=1);
 define('ABSPATH', __DIR__ . '/../');
 
 //wp-config.php:
-define('DB_NAME', 'database_name_here');
-define('DB_USER', 'username_here');
-define('DB_PASSWORD', 'password_here');
+// TODO: temp Lokl creds
+define('DB_NAME', 'wordpress');
+define('DB_USER', 'root');
+define('DB_PASSWORD', 'banana');
 define('DB_HOST', 'localhost');
 define('DB_CHARSET', 'utf8');
 define('DB_COLLATE', '');
@@ -894,6 +895,9 @@ date_default_timezone_set( 'UTC' );
 
 // Standardize $_SERVER variables across setups.
 wp_fix_server_vars();
+
+// Check if we're in maintenance mode.
+wp_maintenance();
 
 // Start loading timer.
 timer_start();

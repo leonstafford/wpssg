@@ -50,6 +50,32 @@ VOLUMES
 
 Then SSH into your site's container and run `ln -s wpssg/wpssg.php ./`
 
+#### CLI parsing HTML output
+
+Getting a wall of HTML in your terminal rarely shows the part you need, especially if it's a PHP error at the top. `pup` helps to reveal just what you want from the output.
+
+[Install Go](https://stackoverflow.com/a/62106997/1668057) ([add to PATH](https://superuser.com/a/1659138/162919)) and [Pup](https://github.com/ericchiang/pup/releases/tag/v0.4.0).
+
+Example usage:
+
+```
+/usr/html # php wpssg.php | pup 'body text{}'
+PHP Fatal error:  Uncaught TypeError: version_compare(): Argument #1 ($version1) must be of type string, null given in /usr/html/wp-content/plugins/wp2static-addon-cloudflare-workers/src/Requirements.php:53
+Stack trace:
+#0 /usr/html/wp-content/plugins/wp2static-addon-cloudflare-workers/src/Requirements.php(53): version_compare()
+#1 /usr/html/wp-content/plugins/wp2static-addon-cloudflare-workers/wp2static-addon-cloudflare-workers.php(91): WP2StaticCloudflareWorkers\Requirements->wp()
+#2 /usr/html/wpssg/wpssg.php(1235): include_once('...')
+#3 {main}
+  thrown in /usr/html/wp-content/plugins/wp2static-addon-cloudflare-workers/src/Requirements.php on line 53
+
+
+There has been a critical error on this website.
+Learn more about troubleshooting WordPress.
+```
+
+
+
+
 ### Documentation
 
 I'm unlikely to have decent docs in early project days. Refer to the source code/unit tests/usage instructions from the script.
