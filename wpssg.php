@@ -451,7 +451,7 @@ function wp_get_mu_plugins() {
 }
 
 // needed for asset detection
-function wp_get_active_and_valid_plugins() : string[] {
+function wp_get_active_and_valid_plugins() : array {
     $plugins        = array();
     $active_plugins = (array) get_option( 'active_plugins', array() );
 
@@ -519,7 +519,7 @@ function wp_skip_paused_plugins( array $plugins ) {
 }
 
 // may be needed for asset detection
-function wp_get_active_and_valid_themes() : string[] {
+function wp_get_active_and_valid_themes() : array {
     global $pagenow;
 
     $themes = array();
@@ -856,6 +856,8 @@ function wp_is_xml_request() {
     return false;
 }
 
-return apply_filters( 'wp_is_site_protected_by_basic_auth', false, 'front' );
+function wp_is_site_protected_by_basic_auth( $context = '' ) : mixed {
+    return apply_filters( 'wp_is_site_protected_by_basic_auth', false, 'front' );
+}
 
 echo PHP_EOL . 'END OF SCRIPT' . PHP_EOL;
