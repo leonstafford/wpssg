@@ -1,0 +1,55 @@
+{
+    "name": "leonstafford/wpssg",
+    "description": "Experimental WordPress static site generator (SSG), with an 'inside-out' approach.",
+    "homepage": "https://github.com/leonstafford/wpssg",
+    "license": "UNLICENSE",
+    "authors": [
+        {
+            "name": "Leon Stafford",
+            "email": "me@ljs.dev",
+            "homepage": "https://ljs.dev"
+        }
+    ],
+    "type": "library",
+    "support": {
+        "issues": "https://github.com/leonstafford/wpssg/issues",
+        "forum": "https://github.com/leonstafford/wpssg/discussion",
+        "docs": "https://github.com/leonstafford/wpssg",
+        "source": "https://github.com/leonstafford/wpssg"
+    },
+    "require": {
+        "php": ">=8.0"
+    },
+    "require-dev": {
+        "10up/wp_mock": "*",
+        "dealerdirect/phpcodesniffer-composer-installer": "*",
+        "infection/infection": "*",
+        "mikey179/vfsstream": "*",
+        "mockery/mockery": "*",
+        "pestphp/pest": "*",
+        "php-parallel-lint/php-parallel-lint": "*",
+        "phpcompatibility/php-compatibility": "*",
+        "phpstan/phpstan-strict-rules": "*",
+        "phpunit/phpunit": "*",
+        "squizlabs/php_codesniffer": "dev-master",
+        "szepeviktor/phpstan-wordpress": "*",
+        "szepeviktor/phpcs-psr-12-neutron-hybrid-ruleset": "*",
+        "vimeo/psalm": "*"
+    },
+    "scripts": {
+      "phpstan": "php -d memory_limit=-1 ./vendor/bin/phpstan --configuration=conf/phpstan.neon analyse",
+      "phpcbf": "vendor/bin/phpcbf --standard=conf/phpcs.xml wpssg.php",
+      "phpcs":  "vendor/bin/phpcs -s --standard=conf/phpcs.xml wpssg.php",
+      "pest": "vendor/bin/pest -c conf/phpunit.xml",
+      "coverage": "vendor/bin/pest --coverage",
+      "lint": "vendor/bin/parallel-lint --exclude vendor wpssg.php",
+      "test": [
+          "composer validate --strict",
+          "@lint",
+          "@phpcs",
+          "@phpstan",
+          "@pest",
+          "@coverage"
+      ]
+    }
+}
