@@ -48,3 +48,5 @@ define('WPINC', 'wp-includes');
 // make a decision on language support and load the DB. a lot of this file is unneeded utility code.
 
 // review load.php further, then continue with wp-settings.php review from line 34
+
+echo PHP_EOL . 'END OF SCRIPT' . PHP_EOL;

@@ -40,6 +40,16 @@ Aiming for a chunk of the 80% market of sites which can easily be converted to s
  - `composer install`
  - `composer run-script test`
 
+To use [Lokl](https://lokl.dev) in development, set a template like:
+
+```
+VOLUMES
+
+/Users/leon/wpssg:/usr/html/wpssg/
+```
+
+Then SSH into your site's container and run `ln -s wpssg/wpssg.php ./`
+
 ### Documentation
 
 I'm unlikely to have decent docs in early project days. Refer to the source code/unit tests/usage instructions from the script.
